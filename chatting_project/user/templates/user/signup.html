@@ -1,0 +1,31 @@
+{% extends "user/include.html" %} {% block content %}
+<div class="singup_form">
+  <form method="POST">
+    <h2>Sign up</h2>
+    {% csrf_token %}
+    <div class="input_box">
+      <input type="text" name="username" placeholder="Enter username" />
+    </div>
+    <div class="input_box">
+      <input type="email" name="email" placeholder="Enter email" />
+    </div>
+    <div class="input_box">
+      <input type="password" name="password" placeholder="Enter password" />
+    </div>
+    <div class="input_box">
+      <input
+        type="password"
+        name="confirm_password"
+        placeholder="Confirm password"
+      />
+    </div>
+    <div class="submit_button"><button type="submit">Submit</button></div>
+    <div class="register_link">
+      <a href="{% url 'login' %}" style="margin-right: 200px"
+        >Already have account?</a
+      >
+      <a href="{% url 'forget-password' %}">Forget password</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

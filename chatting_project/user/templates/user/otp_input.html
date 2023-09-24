@@ -1,0 +1,12 @@
+{% extends "user/include.html" %} {% block content %}
+<div class="singup_form">
+  <form method="POST">
+    <h2>Enter your otp</h2>
+    {% csrf_token %}
+    <div class="input_box">
+      <input type="text" name="otp_number" placeholder="Enter otp number" />
+    </div>
+    <div class="submit_button"><button type="submit">Submit</button></div>
+  </form>
+</div>
+{% endblock %}
