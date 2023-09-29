@@ -1,0 +1,229 @@
+{% extends 'user/extend.html' %}{% block content %}
+<style>
+  .messages-main {
+    background-color: white;
+    width: 80%;
+    height: 75%;
+    padding: 25px;
+    display: grid;
+    grid-template-columns: 30% 70%;
+    margin-left: 7%;
+    border-radius: 25px;
+    box-shadow: 15px 15px #969595;
+    margin-top: 20px;
+  }
+  .list {
+    border-right: 1px solid black;
+  }
+  .search_input {
+    width: 80%;
+    height: 40px;
+    padding: 15px;
+    font-size: 20px;
+    border-radius: 15px;
+  }
+  .user_lists {
+    margin-top: 5px;
+  }
+  .user {
+    width: 80%;
+    margin-top: 10px;
+    padding: 3px;
+    text-align: center;
+    border-radius: 25px;
+  }
+  .user:hover {
+    background-color: #e6e6e6;
+  }
+  .message-field {
+    margin-left: 10px;
+  }
+  .heading {
+    border-bottom: 1px solid black;
+  }
+  .text-messages {
+    height: 320px;
+    overflow-y: auto;
+  }
+  .text_input {
+    width: 80%;
+    height: 30px;
+    font-size: 20px;
+    padding: 15px;
+    border-radius: 10px;
+  }
+  .message_input {
+    margin-top: 15px;
+    border-top: black solid 1px;
+    padding: 15px;
+  }
+  .submit {
+    height: 35px;
+    font-size: 20px;
+    border-radius: 10px;
+    width: 20%;
+  }
+  .own-message {
+    text-align: right;
+    margin-right: 10px;
+  }
+  /* width */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  /* Track */
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+
+  /* Handle */
+  ::-webkit-scrollbar-thumb {
+    background: #888;
+  }
+
+  /* Handle on hover */
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+  .dropdown-content {
+    position: absolute;
+    background-color: #f1f1f1;
+    width: 20%;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+  }
+  
+</style>
+<div class="messages-main">
+  <div class="list">
+    <input
+      id="search-input"
+      onkeyup="get_data_using_ajax()"
+      onkeydown="empty_div()"
+      class="search_input"
+      type="text"
+      placeholder="Search User"
+    />
+    <div class="dropdown-content" id="dropdown-content"></div>
+    <div class="user_lists">
+      {% for user_room in user_rooms %}
+      <a style="text-decoration: none" href="{% url "chat-home" user_room.id %}">
+        <div class="user"><h3>{% if request.user.username == user_room.user1 %}
+          {{user_room.user2}}
+          {% else %}
+          {{user_room.user1}}
+          {% endif %}</div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="message-field">
+    <div class="heading"><h3 id = "receiver">{% if request.user.username == room.user1 %}
+      {{room.user2}}
+      {% else %}
+      {{room.user1}}
+      {% endif %}</h3></div>
+    <div class="messages_box">
+      <div id="message-box" class="text-messages">
+        {% for chat in chats %}
+        {% if chat.msg_from != request.user %}
+        <div class="friend-message">
+          <p><h4 style = "margin-bottom: -10px">{{ chat.msg_from.username }}</h4><br />{{ chat.message }}</p>
+        </div>
+        {% else %}
+        <div class="own-message">
+          <p><h4 style = "margin-bottom: -10px">{{ chat.msg_from.username }}</h4><br />{{ chat.message }}</p>
+        </div>
+        {% endif %}
+        
+        {% endfor %}        
+      </div>
+      <div class="message_input">
+        <input
+          class="text_input"
+          id="text_input"
+          type="text"
+          placeholder="Enter the message"
+        /><button id="submit" class="submit" type="submit">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  
+  function empty_div() {
+    document.getElementById("dropdown-content").innerHTML = "";
+  }
+  function bottom_scroll() {
+    const msgDiv = document.getElementById("message-box");
+    msgDiv.scrollTop = msgDiv.scrollHeight;
+  }
+  bottom_scroll();
+  function get_data_using_ajax() {
+    var q = document.getElementById("search-input").value;
+    const url = `http://127.0.0.1:8000/chat/search/${q}/`;
+    console.log(q);
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function () {
+      if (this.readyState == 4 && this.status == 200) {
+        document.getElementById("dropdown-content").innerHTML =
+          this.responseText;
+      }
+    };
+    xmlhttp.open("GET", url, true);
+    xmlhttp.send();
+  }
+  const param = "{{pk}}";
+  const chatSocket = new WebSocket(
+    "ws://" + window.location.host + "/ws/chat/" + param + "/"
+  );
+
+  chatSocket.onmessage = function (e) {
+    const data = JSON.parse(e.data);
+    if ("{{request.user.username }}" === data.sender) {
+      document.getElementById(
+        "message-box"
+      ).innerHTML += `<div class="own-message">
+        <p><h4 style = "margin-bottom: -10px">${data.sender}4></h<br />${data.message}</p>
+      </div>`;
+    } else {
+      document.getElementById(
+        "message-box"
+      ).innerHTML += `<div class="friend-message">
+        <p><h4 style = "margin-bottom: -10px">${data.sender}</h4><br />${data.message}</p>
+      </div>`;
+    }
+    bottom_scroll();
+  };
+
+  chatSocket.onclose = function (e) {
+    console.error("Chat socket closed unexpectedly");
+  };
+  document.querySelector("#text_input").onkeyup = function (e) {
+    if (e.key === "Enter") {
+      // enter, return
+      document.querySelector("#submit").click();
+    }
+  };
+
+  document.querySelector("#submit").onclick = function (e) {
+    const messageInputDom = document.querySelector("#text_input");
+    const message = messageInputDom.value;
+    if("{{request.user.username}}" == "{{room.user1}}"){
+      receiver = "{{room.user2}}"
+    }else{
+      receiver = "{{room.user1}}"
+    }
+    chatSocket.send(
+      JSON.stringify({
+        message: message,
+        sender: "{{request.user.username}}",
+        receiver:receiver,
+
+      })
+    );
+    messageInputDom.value = "";
+  };
+</script>
+{% endblock %}

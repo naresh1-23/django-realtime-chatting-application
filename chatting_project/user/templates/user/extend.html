@@ -1,0 +1,46 @@
+{% load static %}
+<html>
+  <head>
+    <title>chat app</title>
+
+    <link rel="stylesheet" href="{% static 'user/style.css' %}" />
+    <style>
+      .nav {
+        display: grid;
+        grid-template-columns: auto auto auto auto;
+        padding: 15px;
+        height: 40px;
+        border-bottom: 1px solid black;
+        font-size: 20px;
+        text-decoration: none;
+        background-color: #e6e6e6;
+        text-align: center;
+      }
+      .nav a {
+        text-decoration: none;
+        text-decoration: black;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="nav">
+      {% if user.is_authenticated %}
+      <div><a href="{% url 'home' %}">Home</a></div>
+      <div><a href="{% url 'forget-password' %}">Forget password</a></div>
+      <div><a href="{% url 'change-password' %}">Change password</a></div>
+      <div><a href="{% url 'logout' %}">Logout</a></div>
+      {% else %}
+      <div><a href="{% url 'login' %}">Login</a></div>
+      <div><a href="{% url 'signup' %}">Signup</a></div>
+      <div><a href="{% url 'forget-password' %}">Forget password</a></div>
+
+      {% endif%}
+    </div>
+    {% if messages %} {% for message in messages %}
+    <div class="messages">
+      <h2>{{message}}</h2>
+    </div>
+    {% endfor %} {% endif %}
+    <div class="chatbox">{% block content %}{% endblock %}</div>
+  </body>
+</html>

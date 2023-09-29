@@ -13,52 +13,57 @@ import datetime
 
 
 def SignupView(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        password2 = request.POST.get('confirm_password')
-        hassed_password = make_password(password)
-        usercheck = User.objects.filter(username = username).first()
-        if username == '' or password == '' or password2 == '' or email == '':
-            messages.warning(request, "Fields cannot be empty")
-            return redirect('signup')
-        elif password != password2:
-            messages.warning(request, "password cannot be matched")
-            return redirect('signup')
-        elif usercheck:
-            messages.warning(request, "Username already exist")
-            return redirect('signup')
-        else:
-            user = User.objects.create(username = username, email = email, password = hassed_password)
-            user.save()
-            messages.success(request, "Successfully registered. Now you can login.")
-            return redirect('login')
+    if not request.user.is_authenticated:
+        if request.method == 'POST':
+            username = request.POST.get('username')
+            email = request.POST.get('email')
+            password = request.POST.get('password')
+            password2 = request.POST.get('confirm_password')
+            hassed_password = make_password(password)
+            usercheck = User.objects.filter(username = username).first()
+            if username == '' or password == '' or password2 == '' or email == '':
+                messages.warning(request, "Fields cannot be empty")
+                return redirect('signup')
+            elif password != password2:
+                messages.warning(request, "password cannot be matched")
+                return redirect('signup')
+            elif usercheck:
+                messages.warning(request, "Username already exist")
+                return redirect('signup')
+            else:
+                user = User.objects.create(username = username, email = email, password = hassed_password)
+                user.save()
+                messages.success(request, "Successfully registered. Now you can login.")
+                return redirect('login')
+            return render(request, 'user/signup.html')
         return render(request, 'user/signup.html')
-    return render(request, 'user/signup.html')
+    return redirect('home')
 
 def LoginView(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        if email == '' or password == '':
-            messages.warning(request, "Fields cannot be empty.")
-            return redirect('login')
-        else:
-            user = authenticate(request,username = username, email = email, password = password)
-            print(user)
-            if user is None:
-                messages.warning(request, "Email or password didn't matched.")
+    if not request.user.is_authenticated:
+        if request.method == 'POST':
+            username = request.POST.get('username')
+            email = request.POST.get('email')
+            password = request.POST.get('password')
+            if email == '' or password == '':
+                messages.warning(request, "Fields cannot be empty.")
+                return redirect('login')
             else:
-                login(request, user)
-                messages.success(request, "Successfully logged in.")
-    return render(request, "user/login.html")
+                user = authenticate(request,username = username, email = email, password = password)
+                print(user)
+                if user is None:
+                    messages.warning(request, "Email or password didn't matched.")
+                else:
+                    login(request, user)
+                    messages.success(request, "Successfully logged in.")
+                    return redirect('home')
+        return render(request, "user/login.html")
+    return redirect('home')
 
 
 def LogoutView(request):
     if request.user.is_authenticated:
-        logout(request.user)
+        logout(request)
         messages.success(request, "Succsesfully logged out.")
         return redirect('login')
     return redirect('login')
@@ -85,10 +90,10 @@ def ChangePasswordView(request):
                         user.password = hashed_password
                         user.save()
                         messages.success(request, "Password successfully changed")
-                        return redirect('login')
+                        return redirect('home')
                 else:
                     messages.warning(request, "Old password didn't matched")
-                    return redirect('login')
+                    return redirect('change-password')
         return render(request, "user/change_password.html")
     return redirect('login')
 
@@ -115,38 +120,12 @@ def sendVerifyEmail(email, user):
     send_mail(subject, message, from_email, [email])
  
 def SendVerifyEmail(request):
-    if not request.user.is_verified:
-        email= request.user.email
-        user = request.user
-        otp = VerifyToken.objects.filter(user = user).first()
-        if otp:
-            stringotp = str(otp.created_date)
-            date_obj = datetime.datetime.strptime(stringotp, "%Y-%m-%d %H:%M:%S.%f%z")
-            new_date = datetime.timedelta(minutes=10)+ date_obj
-            stringnew_date = str(new_date)
-            new_date_obj = datetime.datetime.strptime(stringnew_date, "%Y-%m-%d %H:%M:%S.%f%z")
-            current_date = datetime.datetime.now(datetime.timezone.utc)
-            string_current = str(current_date)
-            current_date_obj = datetime.datetime.strptime(string_current,"%Y-%m-%d %H:%M:%S.%f%z")
-            if current_date_obj >= new_date_obj:
-                otp.delete()
-            else:
-                messages.warning(request, "Email is already sent.")
-                return redirect('otp-input')
-        sendVerifyEmail(email, user)
-        messages.success(request, "Please check your email.")
-        return redirect('otp-input')
-    messages.warning(request, "Already verified")
-    return redirect('home')
-
-
-def CheckOTP(request):
-    if not request.user.is_verified:
-        if  request.method == 'POST':
-            otp_number = request.POST.get('otp_number')
-            user  = request.user
-            otp = VerifyToken.objects.filter(otp = otp_number , user= user).first()
-            if otp is not None:
+    if request.user.is_authenticated:
+        if not request.user.is_verified:
+            email= request.user.email
+            user = request.user
+            otp = VerifyToken.objects.filter(user = user).first()
+            if otp:
                 stringotp = str(otp.created_date)
                 date_obj = datetime.datetime.strptime(stringotp, "%Y-%m-%d %H:%M:%S.%f%z")
                 new_date = datetime.timedelta(minutes=10)+ date_obj
@@ -157,19 +136,49 @@ def CheckOTP(request):
                 current_date_obj = datetime.datetime.strptime(string_current,"%Y-%m-%d %H:%M:%S.%f%z")
                 if current_date_obj >= new_date_obj:
                     otp.delete()
-                    messages.warning(request, "Invalid Code")
-                    return redirect('otp-input')
                 else:
-                    user.is_verified = True
-                    user.save()
-                    otp.delete()
-                    messages.success(request, "Now your email is verified")
+                    messages.warning(request, "Email is already sent.")
                     return redirect('otp-input')
-            messages.warning(request, "Invalid code")
+            sendVerifyEmail(email, user)
+            messages.success(request, "Please check your email.")
             return redirect('otp-input')
-        return render(request,'user/otp_input.html')
-    messages.warning(request, "Already verified")
-    return redirect('otp-input')
+        messages.warning(request, "Already verified")
+        return redirect('home')
+    return redircet('login')
+
+
+def CheckOTP(request):
+    if request.user.is_authenticated:
+        if not request.user.is_verified:
+            if  request.method == 'POST':
+                otp_number = request.POST.get('otp_number')
+                user  = request.user
+                otp = VerifyToken.objects.filter(otp = otp_number , user= user).first()
+                if otp is not None:
+                    stringotp = str(otp.created_date)
+                    date_obj = datetime.datetime.strptime(stringotp, "%Y-%m-%d %H:%M:%S.%f%z")
+                    new_date = datetime.timedelta(minutes=10)+ date_obj
+                    stringnew_date = str(new_date)
+                    new_date_obj = datetime.datetime.strptime(stringnew_date, "%Y-%m-%d %H:%M:%S.%f%z")
+                    current_date = datetime.datetime.now(datetime.timezone.utc)
+                    string_current = str(current_date)
+                    current_date_obj = datetime.datetime.strptime(string_current,"%Y-%m-%d %H:%M:%S.%f%z")
+                    if current_date_obj >= new_date_obj:
+                        otp.delete()
+                        messages.warning(request, "Invalid Code")
+                        return redirect('otp-input')
+                    else:
+                        user.is_verified = True
+                        user.save()
+                        otp.delete()
+                        messages.success(request, "Now your email is verified")
+                        return redirect('otp-input')
+                messages.warning(request, "Invalid code")
+                return redirect('otp-input')
+            return render(request,'user/otp_input.html')
+        messages.warning(request, "Already verified")
+        return redirect('otp-input')
+    return redirect('login')
 
 
 def SendForgetEmail(request):
@@ -177,7 +186,8 @@ def SendForgetEmail(request):
         email= request.POST.get('email')
         user = User.objects.filter(email = email).first()
         if user is None:
-            return JsonResponse({"status": 400, "message": "user doesn't exist"})
+            messages.warning(request, "User doesn't exist")
+            return redirect('forget-password')
         forget_password = ForgetPasswordToken.objects.filter(user = user).first()
         if forget_password:
             stringotp = str(forget_password.created_date)

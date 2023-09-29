@@ -1,0 +1,13 @@
+{% for user in users %}
+<style>
+  .search-datas:hover {
+    background-color: white;
+  }
+</style><a style="text-decoration: none" href="{% url "check-room" user.id %}">
+<div
+  class="search-datas"
+  style="margin: 15px 5px; font-size: 25px; text-decoration: none"
+>
+  {{ user.username }}
+</div></a>
+{% endfor %}

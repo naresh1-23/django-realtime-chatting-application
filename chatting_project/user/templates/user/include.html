@@ -2,13 +2,13 @@
 <html>
   <head>
     <title>Chatting app</title>
-    <link rel = "stylesheet" href = "{% static "style.css" %}"></link>
+    <link rel = "stylesheet" href = "{% static "user/style.css" %}"></link>
   </head>
   <body>
     {% if messages %} {% for message in messages %}
     <div class="messages">
       <h2>{{message}}</h2>
     </div>
-    {% endfor %} {% endif %}<div class = "main"> {% block content %}{% endblock %}</div>
+    {% endfor %} {% endif %}{% block content %}{% endblock %}
   </body>
 </html>
